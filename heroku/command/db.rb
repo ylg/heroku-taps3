@@ -16,7 +16,7 @@ module Heroku::Command
     rescue LoadError
       message  = "Taps3 Load Error: #{$!.message}\n"
       message << "You may need to install or update the taps gem to use db commands.\n"
-      message << "On most systems this will be:\n\nsudo gem install taps"
+      message << "On most systems this will be:\n\nsudo gem install --pre taps"
       error message
     end
 
