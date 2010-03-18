@@ -12,7 +12,7 @@ module Heroku::Command
       super(*args)
       gem 'taps', '~> 0.3.0'
       require 'taps/client_session'
-      message "Loaded Taps v#{Taps.version}"
+      display "Loaded Taps v#{Taps.version}"
     rescue LoadError
       message  = "Taps3 Load Error: #{$!.message}\n"
       message << "You may need to install or update the taps gem to use db commands.\n"
