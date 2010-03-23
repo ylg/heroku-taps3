@@ -31,9 +31,7 @@ module Heroku::Command
       # setting local timezone equal to Heroku timezone allowing TAPS to
       # correctly transfer datetime fields between databases
       ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(database_url) do |client|
-        client.push
-      end
+      taps_client(:push, database_url).run
     end
 
     def pull
@@ -47,25 +45,19 @@ module Heroku::Command
       # setting local timezone equal to Heroku timezone allowing TAPS to
       # correctly transfer datetime fields between databases
       ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(database_url) do |client|
-        client.pull
-      end
+      taps_client(:pull, database_url).run
     end
 
     protected
 
-    def taps_client(database_url, &block)
+    def taps_client(op, database_url, &block)
       chunk_size = 1000
-      Taps::Config.database_url = database_url
-      Taps::Config.verify_database_url
+      Taps::Config.verify_database_url(database_url)
 
       info = heroku.database_session(app)
 
-      Taps::ClientSession.start(database_url, info['url'], chunk_size) do |client|
-        client.set_session(info['session'])
-        client.verify_server
-        yield client
-      end
+      taps = Taps::Operation.factory(op, database_url, info['url'], :default_chunksize => chunksize, :session_uri => info['session'])
+      taps
     end
   end
 end
