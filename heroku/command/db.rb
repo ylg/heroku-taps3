@@ -2,7 +2,8 @@ require 'json'
 
 class Heroku::Client
   def database_session(app_name)
-    JSON.parse(post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION))
+    response = post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION)
+    JSON.parse(response.body)
   end
 end
 
