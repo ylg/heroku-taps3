@@ -2,7 +2,7 @@ require 'json'
 
 class Heroku::Client
   def database_session(app_name)
-    JSON.parse(post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION))
+    JSON.parse(post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION).to_s)
   end
 end
 
@@ -11,7 +11,7 @@ module Heroku::Command
     def initialize(*args)
       super(*args)
       gem 'taps', '~> 0.3.0'
-      require 'taps/client_session'
+      require 'taps/operation'
       display "Loaded Taps v#{Taps.version}"
     rescue LoadError
       message  = "Taps3 Load Error: #{$!.message}\n"
@@ -51,7 +51,7 @@ module Heroku::Command
     protected
 
     def taps_client(op, database_url, &block)
-      chunk_size = 1000
+      chunksize = 1000
       Taps::Config.verify_database_url(database_url)
 
       info = heroku.database_session(app)
