@@ -2,8 +2,7 @@ require 'json'
 
 class Heroku::Client
   def database_session(app_name)
-    response = post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION)
-    JSON.parse(response.body)
+    JSON.parse(post("/apps/#{app_name}/database/session2", '', :x_taps_version => Taps.version, :x_ruby_version => RUBY_VERSION).to_s)
   end
 end
 
@@ -32,7 +31,7 @@ module Heroku::Command
       # setting local timezone equal to Heroku timezone allowing TAPS to
       # correctly transfer datetime fields between databases
       ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(:push, database_url)
+      taps_client(:push, database_url).run
     end
 
     def pull
@@ -46,19 +45,19 @@ module Heroku::Command
       # setting local timezone equal to Heroku timezone allowing TAPS to
       # correctly transfer datetime fields between databases
       ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(:pull, database_url)
+      taps_client(:pull, database_url).run
     end
 
     protected
 
-    def taps_client(method, database_url)
-      chunk_size = 1000
-      Taps::Config.verify_database_url database_url
+    def taps_client(op, database_url, &block)
+      chunksize = 1000
+      Taps::Config.verify_database_url(database_url)
 
       info = heroku.database_session(app)
 
-      taps = Taps::Operation.factory(method, database_url, info['url'], :default_chunksize => chunk_size)
-      taps.run
+      taps = Taps::Operation.factory(op, database_url, info['url'], :default_chunksize => chunksize, :session_uri => info['session'])
+      taps
     end
   end
 end
