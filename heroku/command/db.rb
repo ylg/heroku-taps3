@@ -12,6 +12,7 @@ module Heroku::Command
       super(*args)
       gem 'taps', '~> 0.3.0'
       require 'taps/operation'
+      require 'taps/cli'
       display "Loaded Taps v#{Taps.version}"
     rescue LoadError
       message  = "Taps3 Load Error: #{$!.message}\n"
@@ -21,43 +22,52 @@ module Heroku::Command
     end
 
     def push
-      database_url = args.shift.strip rescue ''
-      if database_url == ''
-        database_url = parse_database_yml
-        display "Auto-detected local database: #{database_url}" if database_url != ''
-      end
-      raise(CommandFailed, "Invalid database url") if database_url == ''
-
-      # setting local timezone equal to Heroku timezone allowing TAPS to
-      # correctly transfer datetime fields between databases
-      ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(:push, database_url).run
+      opts = parse_taps_opts
+      taps_client(:push, opts)
     end
 
     def pull
-      database_url = args.shift.strip rescue ''
-      if database_url == ''
-        database_url = parse_database_yml
-        display "Auto-detected local database: #{database_url}" if database_url != ''
-      end
-      raise(CommandFailed, "Invalid database url") if database_url == ''
-
-      # setting local timezone equal to Heroku timezone allowing TAPS to
-      # correctly transfer datetime fields between databases
-      ENV['TZ'] = 'America/Los_Angeles'
-      taps_client(:pull, database_url).run
+      opts = parse_taps_opts
+      taps_client(:pull, opts)
     end
 
     protected
 
-    def taps_client(op, database_url, &block)
-      chunksize = 1000
-      Taps::Config.verify_database_url(database_url)
+    def parse_taps_opts
+      opts = {}
+      opts[:default_chunksize] = extract_option("--chunksize", 1000)
 
-      info = heroku.database_session(app)
+      if extract_option("--disable-compression")
+        opts[:disable_compression] = true
+      end
 
-      taps = Taps::Operation.factory(op, database_url, info['url'], :default_chunksize => chunksize, :session_uri => info['session'])
-      taps
+      if resume_file = extract_option("--resume-filename")
+        opts[:resume_filename] = resume_file
+      end
+
+      opts[:database_url] = args.shift.strip rescue ''
+      if opts[:database_url] == ''
+        opts[:database_url] = parse_database_yml
+        display "Auto-detected local database: #{opts[:database_url]}" if opts[:database_url] != ''
+      end
+      raise(CommandFailed, "Invalid database url") if opts[:database_url] == ''
+
+      # setting local timezone equal to Heroku timezone allowing TAPS to
+      # correctly transfer datetime fields between databases
+      ENV['TZ'] = 'America/Los_Angeles'
+      opts
+    end
+
+    def taps_client(op, opts)
+      Taps::Config.verify_database_url(opts[:database_url])
+      if opts[:resume_filename]
+        Taps::Cli.new([]).clientresumexfer(op, opts)
+      else
+        info = heroku.database_session(app)
+        opts[:remote_url] = info['url']
+        opts[:session_uri] = info['session']
+        Taps::Cli.new([]).clientxfer(op, opts)
+      end
     end
   end
 end
