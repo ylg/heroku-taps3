@@ -35,7 +35,8 @@ module Heroku::Command
 
     def parse_taps_opts
       opts = {}
-      opts[:default_chunksize] = extract_option("--chunksize", 1000)
+      opts[:default_chunksize] = extract_option("--chunksize", 1000) || 1000
+      
 
       if extract_option("--disable-compression")
         opts[:disable_compression] = true
